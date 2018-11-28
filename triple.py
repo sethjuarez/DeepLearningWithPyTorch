@@ -56,7 +56,7 @@ def train(n=512, epochs=50000, lr = 1e-3):
 
         # grad + update
         grad_w = 2 * X.T.dot(h - y) / n
-        W = W - lr * grad_w
+        W -= lr * grad_w
 
     print('\nFinal W = \n\n{}'.format(W))
     return W
