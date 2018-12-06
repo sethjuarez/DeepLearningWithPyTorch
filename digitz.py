@@ -87,6 +87,8 @@ def main(epochs=5, learning_rate=1e-3):
     # save model
     info('Saving Model')
     save_model(model, device, 'model.onnx')
+    print('Saving PyTorch Model as model.pth')
+    torch.save(model.state_dict(), 'model.pth')
 
 if __name__ == '__main__':
     main()

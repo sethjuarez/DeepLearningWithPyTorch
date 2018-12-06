@@ -106,3 +106,4 @@ venv.bak/
 # data
 .vscode/
 data/
+aml_config/
