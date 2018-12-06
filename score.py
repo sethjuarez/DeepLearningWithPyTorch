@@ -19,7 +19,7 @@ def init():
     device = torch.device('cpu')
 
     model = CNN()
-    model.load_state_dict(torch.load(model_path))
+    model.load_state_dict(torch.load(model_path, map_location=device))
     model.to(device)
     model.eval()
 
@@ -34,7 +34,7 @@ def run(raw_data):
     # run model
     with torch.no_grad():
         x = torch.from_numpy(image).float().to(device)
-        pred = model(x).detach().numpy()
+        pred = model(x).detach().numpy()[0]
 
     # get timing
     current_time = time.time()

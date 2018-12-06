@@ -56,7 +56,14 @@ def main():
                                         deployment_config=aciconfig)
     service.wait_for_deployment(show_output=True)
 
-
+def debug_deploy():
+    # get workspace
+    ws = load_workspace()
+    # get service
+    service = ws.webservices['pytorchmnist-svc']
+    # write log
+    with open('deploy.log','w') as f:
+        f.write(service.get_logs())
 
 
 if __name__ == '__main__':
