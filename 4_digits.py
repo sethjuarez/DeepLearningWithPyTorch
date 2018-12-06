@@ -41,9 +41,9 @@ epochs = 10
 for t in range(epochs):
     for batch, (X, Y) in enumerate(dataloader):
         X, Y = X.to(device), Y.to(device)
+        optimizer.zero_grad()
         pred = model(X)
         loss = cost(pred, Y)
-        optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 

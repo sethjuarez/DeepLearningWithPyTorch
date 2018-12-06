@@ -1,5 +1,8 @@
 import torch
+import torch.onnx as onnx
+import torch.optim as optim
 from utils.helpers import *
+from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 from models import Logistic, NeuralNework, CNN
@@ -22,13 +25,13 @@ def train(model, device, dataloader, cost, optimizer, epoch):
     model.train()
     for batch, (X, Y) in enumerate(dataloader):
         X, Y = X.to(device), Y.to(device)
+        optimizer.zero_grad()
         pred = model(X)
         loss = cost(pred, Y)
-        optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
-        if batch % 50 == 0:
+        if batch % 100 == 0:
             print('loss: {:>10f}  [{:>5d}/{:>5d}]'.format(loss.item(), batch * len(X), len(dataloader.dataset)))
     
 
@@ -47,9 +50,16 @@ def test(model, device, dataloader, cost):
     test_loss /= len(dataloader.dataset)
     correct /= len(dataloader.dataset)
     print('\nTest Error:')
-    print('acc: {:>8f}, loss: {:>8f}'.format(test_loss, 100*correct))
+    print('acc: {:>0.1f}%, avg loss: {:>8f}'.format(100*correct, test_loss))
 
-def main(epochs=10, learning_rate=.01):
+def save_model(model, device, path):
+    # create dummy variable to traverse graph
+    x = Variable(torch.randint(255, (1, 28*28), dtype=torch.float).to(device) / 255)
+    onnx.export(model, x, path)
+    print('Saved model to {}'.format(path))
+
+
+def main(epochs=5, learning_rate=1e-3):
     # use GPU
     device = torch.device('cuda')
 
@@ -58,21 +68,25 @@ def main(epochs=10, learning_rate=.01):
     testing = get_dataloader(train=False)
 
     # model
-    model = Logistic().to(device)
+    model = CNN().to(device)
+    info('Model')
+    print(model)
+
 
     # cost function
-    cost = torch.nn.MSELoss(reduction='sum')
+    cost = torch.nn.BCELoss()
 
     # optimizers
-    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.8)
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
     for epoch in range(1, epochs + 1):
         info('Epoch {}'.format(epoch))
         train(model, device, training, cost, optimizer, epoch)
         test(model, device, testing, cost)
 
-    # tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=y, logits=hx))
-    # tf.train.AdamOptimizer(settings.lr).minimize(cost)
+    # save model
+    info('Saving Model')
+    save_model(model, device, 'model.onnx')
 
 if __name__ == '__main__':
     main()
