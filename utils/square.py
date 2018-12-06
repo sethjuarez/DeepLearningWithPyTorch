@@ -25,3 +25,7 @@ if __name__ == "__main__":
     data = SquareDataset(10)
     for i in range(len(data)):
         print(data[i])
+
+
+
+        
