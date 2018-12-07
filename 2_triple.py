@@ -55,7 +55,7 @@ def train(n=512, epochs=56000, lr = 1e-3):
 
 #%%
 W, b = train()
-print('\nFinal W = \n\n{}\n\nFinal b = \n\n{}'.format(*W, b))
+print('\nFinal W = \n\n{}\n\nFinal b = \n\n{}'.format(W, b))
 
 #%%
 npix = np.array([[255, 143, 23, 255, 187, 93, 255, 255, 255]])
