@@ -107,3 +107,4 @@ venv.bak/
 .vscode/
 data/
 aml_config/
+outputs/
