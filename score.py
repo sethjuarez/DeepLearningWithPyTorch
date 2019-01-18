@@ -23,6 +23,8 @@ def init():
     model.to(device)
     model.eval()
 
+    print('Initialized model "{}" at {}'.format(model_path, datetime.datetime.now()))
+
 def run(raw_data):
     prev_time = time.time()
           
