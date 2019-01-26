@@ -11,3 +11,16 @@ It is also inspired by a silly nine squares image problem.
 The purpose of this silly problem is to provide the basic intution
 behind models, cost, accuracy, and optimization principles behind
 machine learning.
+
+## Overview
+Review
+
+- tensors
+- calculus
+- dataset
+- dataloader
+- models
+- loss
+- optimization
+- the loop
+- saving and loading
