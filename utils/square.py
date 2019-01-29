@@ -11,12 +11,13 @@ class SquareDataset(Dataset):
                                [0,0,0,0,0,0,1,1,1]], 
                                dtype=torch.float)
 
-        self.Y = torch.argmax(self.X.mm(real_w.t()), 1)
+        y = torch.argmax(self.X.mm(real_w.t()), 1)
+        
+        self.Y = torch.zeros(size, 3, dtype=torch.float) \
+                      .scatter_(1, y.view(-1, 1), 1)
 
     def __getitem__(self, index):
-        y = torch.zeros(3, dtype=torch.float) \
-                 .scatter_(0, self.Y[index], 1)
-        return (self.X[index], y)
+        return (self.X[index], self.Y[index])
 
     def __len__(self):
         return self.size
