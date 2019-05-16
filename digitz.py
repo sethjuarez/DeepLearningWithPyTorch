@@ -37,7 +37,8 @@ def get_dataloader(train=True, batch_size=64, data_dir='data'):
                             transforms.Lambda(lambda x: x.reshape(28*28))
                         ]),
                         target_transform=transforms.Compose([
-                            transforms.Lambda(lambda y: torch.zeros(10, dtype=torch.float).scatter_(0, y, 1))
+                            transforms.Lambda(lambda y: 
+                                torch.zeros(10, dtype=torch.float).scatter_(0, torch.tensor(y), value=1))
                         ])
                      )
 
