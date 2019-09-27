@@ -8,11 +8,11 @@ from IPython.display import Javascript, HTML
 def init():
     return HTML('<script src="https://cdn.jsdelivr.net/npm/vega@5"></script><span>torchviz initialized!</span>')
 
-def get_dict(g, width=650, height=300):
+def get_dict(g, depth):
     d = {
         "$schema": "https://vega.github.io/schema/vega/v5.json",
-        "width": width,
-        "height": height,
+        "width": 650,
+        "height": depth*30,
         "padding": 5,    
         "signals": [
             {
@@ -20,7 +20,7 @@ def get_dict(g, width=650, height=300):
                 "bind": {"input": "checkbox"}
             },
             { 
-                "name": "method", "value": "cluster",
+                "name": "method", "value": "tidy",
                 "bind": {"input": "select", "options": ["tidy", "cluster"]} 
             },
             { 
@@ -110,7 +110,7 @@ def get_dict(g, width=650, height=300):
     d['data'][0]['values'] = g
     return d
 
-def build_graph(g, elements=[], parentId=-1):
+def build_graph(g, elements=[], parentId=-1, depth=0):
     elm = { 'id': len(elements), 'parentId': None if parentId==-1 else parentId}
     if g == None:
         elm['name'] = 'Const'
@@ -127,10 +127,11 @@ def build_graph(g, elements=[], parentId=-1):
     elements.append(elm)
         
     if g != None and g.next_functions != None:
+        depth = depth+1
         for subg in g.next_functions:
-            build_graph(subg[0], elements, elm['id'])
+            elements, depth = build_graph(subg[0], elements, elm['id'], depth)
     
-    return elements
+    return elements, depth
 
 def draw_graph(graph):
     return Javascript("""
@@ -145,9 +146,6 @@ def draw_graph(graph):
 """ % json.dumps(graph))
 
 def draw(g):
-    graph = build_graph(g.grad_fn, elements=[])
-    j = get_dict(graph)
-    #print(json.dumps(j, indent=2))
-    #return alt.Chart.from_dict(j)
-    #return json.dumps(j)
+    graph, depth = build_graph(g.grad_fn, elements=[])
+    j = get_dict(graph, depth)
     return draw_graph(j)
