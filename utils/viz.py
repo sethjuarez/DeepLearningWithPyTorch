@@ -1,113 +1,153 @@
 import re
 import json
 import torch
-from IPython.display import Javascript
+import altair as alt
+from IPython.display import Javascript, HTML
+
 
 def init():
-    j = Javascript("""
-require.config({
-    paths: {
-        
-        d3: 'https://d3js.org/d3.v5.min'
+    return HTML('<script src="https://cdn.jsdelivr.net/npm/vega@5"></script><span>torchviz initialized!</span>')
+
+def get_dict(g, width=650, height=300):
+    d = {
+        "$schema": "https://vega.github.io/schema/vega/v5.json",
+        "width": width,
+        "height": height,
+        "padding": 5,    
+        "signals": [
+            {
+                "name": "labels", "value": True,
+                "bind": {"input": "checkbox"}
+            },
+            { 
+                "name": "method", "value": "cluster",
+                "bind": {"input": "select", "options": ["tidy", "cluster"]} 
+            },
+            { 
+                "name": "separation", "value": False, 
+                "bind": {"input": "checkbox"} 
+            }
+        ],
+    
+        "data": [
+            {
+                "name": "tree",
+                "url": "",
+                "values":[ ],
+                "transform": [
+                    {
+                        "type": "stratify",
+                        "key": "id",
+                        "parentKey": "parentId"
+                    },
+                    {
+                        "type": "tree",
+                        "method": {"signal": "method"},
+                        "separation": {"signal": "separation"},
+                        "size": [{"signal": "width"}, {"signal": "height"}]
+                    }]
+            },
+            {
+                "name": "links",
+                "source": "tree",
+                "url": "",
+                "transform": [
+                    { "type": "treelinks" },
+                    { "type": "linkpath" }
+                ]
+            }
+        ],
+        "marks": [
+        {
+            "type": "path",
+            "from": {"data": "links"},
+                "encode": {
+                "enter": {
+                    "stroke": {"value": "#ccc"}
+                },
+                "update": {
+                    "path": {"field": "path"}
+                }
+            }
+        },
+        {
+            "type": "symbol",
+            "from": {"data": "tree"},
+            "encode": {
+                "enter": {
+                    "text": {"field": "id"},
+                    "fontSize": {"value": 10},
+                    "baseline": {"value": "middle"},
+                    "fill": {"field": "color"},
+                    "stroke": {"value": "#808080"},
+                    "size": {"value": 600 }
+                },
+                "update": {
+                    "x": {"field": "x"},
+                    "y": {"field": "y"}
+                }
+            }
+        },
+        {
+            "type": "text",
+            "from": {"data": "tree"},
+            "encode": {
+            "enter": {
+                "text": {"field": "name"},
+                "fontSize": {"value": 15},
+                "baseline": {"value": "middle"}
+            },
+            "update": {
+                "x": {"field": "x"},
+                "y": {"field": "y"},
+                "dx": {"signal": "15"},
+                "dy": {"signal": "5"},
+                "opacity": {"signal": "labels ? 1 : 0"}
+            }
+            }
+        }]
     }
-});
+    d['data'][0]['values'] = g
+    return d
 
-require.undef('tree');
-
-define('tree', ['d3'], function(d3) {
-    const draw = function(element, data) {
-        var root = d3.hierarchy(data);
-        
-        var width = 600;
-        var height = root.height * 40;
-        var radius = 10;
-        
-        var treeLayout = d3.tree()
-            .size([width, height]);
-        
-        treeLayout(root);
-
-        var svg = d3.select(element).append('svg')
-            .attr('width', width+50)
-            .attr('height', height+50);
-
-        var transform = svg.append('g')
-            .attr('transform', 'translate(20, 20)');
-        
-        // Links
-        transform.append('g')
-            .selectAll('line')
-            .data(root.links())
-            .enter()
-            .append('line')
-            .attr('stroke', '#c0c0c0')
-            .attr('x1', function(d) {return d.source.x;})
-            .attr('y1', function(d) {return d.source.y;})
-            .attr('x2', function(d) {return d.target.x;})
-            .attr('y2', function(d) {return d.target.y;});
-        
-        // Nodes
-        transform.append('g')
-            .selectAll('circle')
-            .data(root.descendants())
-            .enter()
-            .append('circle')
-            .attr('stroke', function(d) { return d.data.leaf === 'true' ? '#808080' : '#000000'; })
-            .attr('fill', function(d) { 
-                if(d.data.name == 'Const')
-                    return '#B37D4E';
-                else if(d.data.name == 'Var')
-                    return '#CD5360';
-                else
-                    return '#286DA8';
-             })
-            .attr('cx', function(d) {return d.x;})
-            .attr('cy', function(d) {return d.y;})
-            .attr('r', radius);
-
-        // labels
-        transform.append('g')
-            .selectAll('text')
-            .data(root.descendants())
-            .enter()
-            .append('text')
-            .text(function(d){return d.data.name;})
-            .attr('x', function(d) {return d.x+radius+3;})
-            .attr('y', function(d) {return d.y+5;});
-    };
-    return draw;
-});
-""")
-    return j
-
-def build_graph(g):
-    tree = {'leaf': 'true'}
+def build_graph(g, elements=[], parentId=-1):
+    elm = { 'id': len(elements), 'parentId': None if parentId==-1 else parentId}
     if g == None:
-        tree['name'] = 'Const'
+        elm['name'] = 'Const'
+        elm['color'] = '#B37D4E'
     elif hasattr(g, 'variable'):
-        tree['name'] = 'Var'
+        elm['name'] = 'Var'
+        elm['color'] = '#CD5360'
     else:
         name = g.name()
         m = name[:re.search(r'^([^A-Z]*[A-Z]){2}', name).span()[1]-1]
-        tree['name'] = m
+        elm['name'] = m
+        elm['color'] = '#286DA8'
+
+    elements.append(elm)
         
     if g != None and g.next_functions != None:
-        children = [build_graph(subg[0]) for subg in g.next_functions]
-        if len(children) > 0:
-            tree['children'] = children
-            tree['leaf'] = 'false'
+        for subg in g.next_functions:
+            build_graph(subg[0], elements, elm['id'])
     
-    return tree
+    return elements
 
 def draw_graph(graph):
     return Javascript("""
 (function(element){
-    require(['tree'], function(tree) {
-        tree(element.get(0), %s)
+    var view = new vega.View(vega.parse(%s), {
+        rendered: 'canvas',
+        container: element,
+        hover: true
     });
+    return view.runAsync();
 })(element);
 """ % json.dumps(graph))
 
 def draw(g):
-    graph = build_graph(g.grad_fn)
-    return draw_graph(graph)
+    graph = build_graph(g.grad_fn, elements=[])
+    j = get_dict(graph)
+    #print(json.dumps(j, indent=2))
+    #return alt.Chart.from_dict(j)
+    #return json.dumps(j)
+    return draw_graph(j)

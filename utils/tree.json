@@ -1,0 +1,109 @@
+{
+    "$schema": "https://vega.github.io/schema/vega/v5.json",
+    "width": 650,
+    "height": 300,
+    "padding": 5,
+  
+    "signals": [
+      {
+        "name": "labels", "value": true,
+        "bind": {"input": "checkbox"}
+      },
+      { 
+        "name": "method", "value": "cluster",
+        "bind": {"input": "select", "options": ["tidy", "cluster"]} 
+      },
+      { 
+        "name": "separation", "value": false, 
+        "bind": {"input": "checkbox"} 
+      }
+    ],
+  
+    "data": [
+      {
+        "name": "tree",
+        "values":[
+          {"id": 0, "parentId": null, "name": "Mean", "color": "#286DA8"}, 
+          {"id": 1, "parentId": 0, "name": "Pow", "color": "#286DA8"}, 
+          {"id": 2, "parentId": 1, "name": "Sub", "color": "#286DA8"}, 
+          {"id": 3, "parentId": 2, "name": "Add", "color": "#286DA8"}, 
+          {"id": 4, "parentId": 3, "name": "Mm", "color": "#286DA8"}, 
+          {"id": 5, "parentId": 4, "name": "Const", "color": "#B37D4E"}, 
+          {"id": 6, "parentId": 4, "name": "Var", "color": "#CD5360"}, 
+          {"id": 7, "parentId": 3, "name": "Var", "color": "#CD5360"}, 
+          {"id": 8, "parentId": 2, "name": "Const", "color": "#B37D4E"}
+        ],
+        "transform": [
+          {
+            "type": "stratify",
+            "key": "id",
+            "parentKey": "parentId"
+          },
+          {
+            "type": "tree",
+            "method": {"signal": "method"},
+            "separation": {"signal": "separation"},
+            "size": [{"signal": "width"}, {"signal": "height"}]
+          }
+        ]
+      },
+      {
+        "name": "links",
+        "source": "tree",
+        "transform": [
+          { "type": "treelinks" },
+          { "type": "linkpath" }
+        ]
+      }
+    ],
+    "marks": [
+      {
+        "type": "path",
+        "from": {"data": "links"},
+        "encode": {
+          "enter": {
+            "stroke": {"value": "#ccc"}
+          },
+          "update": {
+            "path": {"field": "path"}
+          }
+        }
+      },
+      {
+        "type": "symbol",
+        "from": {"data": "tree"},
+        "encode": {
+          "enter": {
+            "text": {"field": "id"},
+            "fontSize": {"value": 10},
+            "baseline": {"value": "middle"},
+            "fill": {"field": "color"},
+            "stroke": {"value": "#808080"},
+            "size": {"value": 600 }
+          },
+          "update": {
+            "x": {"field": "x"},
+            "y": {"field": "y"}
+          }
+        }
+      },
+      {
+        "type": "text",
+        "from": {"data": "tree"},
+        "encode": {
+          "enter": {
+            "text": {"field": "name"},
+            "fontSize": {"value": 15},
+            "baseline": {"value": "middle"}
+          },
+          "update": {
+            "x": {"field": "x"},
+            "y": {"field": "y"},
+            "dx": {"signal": "15"},
+            "dy": {"signal": "5"},
+            "opacity": {"signal": "labels ? 1 : 0"}
+          }
+        }
+      }
+    ]
+  }
