@@ -1,114 +1,8 @@
 import re
 import json
 import torch
-import altair as alt
+import graphviz
 from IPython.display import Javascript, HTML
-
-
-def init():
-    return HTML('<script src="https://cdn.jsdelivr.net/npm/vega@5"></script><span>torchviz initialized!</span>')
-
-def get_dict(g, depth):
-    d = {
-        "$schema": "https://vega.github.io/schema/vega/v5.json",
-        "width": 650,
-        "height": depth*30,
-        "padding": 5,    
-        "signals": [
-            {
-                "name": "labels", "value": True,
-                "bind": {"input": "checkbox"}
-            },
-            { 
-                "name": "method", "value": "tidy",
-                "bind": {"input": "select", "options": ["tidy", "cluster"]} 
-            },
-            { 
-                "name": "separation", "value": False, 
-                "bind": {"input": "checkbox"} 
-            }
-        ],
-    
-        "data": [
-            {
-                "name": "tree",
-                "url": "",
-                "values":[ ],
-                "transform": [
-                    {
-                        "type": "stratify",
-                        "key": "id",
-                        "parentKey": "parentId"
-                    },
-                    {
-                        "type": "tree",
-                        "method": {"signal": "method"},
-                        "separation": {"signal": "separation"},
-                        "size": [{"signal": "width"}, {"signal": "height"}]
-                    }]
-            },
-            {
-                "name": "links",
-                "source": "tree",
-                "url": "",
-                "transform": [
-                    { "type": "treelinks" },
-                    { "type": "linkpath" }
-                ]
-            }
-        ],
-        "marks": [
-        {
-            "type": "path",
-            "from": {"data": "links"},
-                "encode": {
-                "enter": {
-                    "stroke": {"value": "#ccc"}
-                },
-                "update": {
-                    "path": {"field": "path"}
-                }
-            }
-        },
-        {
-            "type": "symbol",
-            "from": {"data": "tree"},
-            "encode": {
-                "enter": {
-                    "text": {"field": "id"},
-                    "fontSize": {"value": 10},
-                    "baseline": {"value": "middle"},
-                    "fill": {"field": "color"},
-                    "stroke": {"value": "#808080"},
-                    "size": {"value": 600 }
-                },
-                "update": {
-                    "x": {"field": "x"},
-                    "y": {"field": "y"}
-                }
-            }
-        },
-        {
-            "type": "text",
-            "from": {"data": "tree"},
-            "encode": {
-            "enter": {
-                "text": {"field": "name"},
-                "fontSize": {"value": 15},
-                "baseline": {"value": "middle"}
-            },
-            "update": {
-                "x": {"field": "x"},
-                "y": {"field": "y"},
-                "dx": {"signal": "15"},
-                "dy": {"signal": "5"},
-                "opacity": {"signal": "labels ? 1 : 0"}
-            }
-            }
-        }]
-    }
-    d['data'][0]['values'] = g
-    return d
 
 def build_graph(g, elements=[], parentId=-1, depth=0):
     elm = { 'id': len(elements), 'parentId': None if parentId==-1 else parentId}
@@ -133,19 +27,27 @@ def build_graph(g, elements=[], parentId=-1, depth=0):
     
     return elements, depth
 
-def draw_graph(graph):
-    return Javascript("""
-(function(element){
-    var view = new vega.View(vega.parse(%s), {
-        rendered: 'canvas',
-        container: element,
-        hover: true
-    });
-    return view.runAsync();
-})(element);
-""" % json.dumps(graph))
 
 def draw(g):
     graph, depth = build_graph(g.grad_fn, elements=[])
-    j = get_dict(graph, depth)
-    return draw_graph(j)
+    g = graphviz.Digraph('g')
+    g.attr('graph', pack='true')
+    for item in graph:
+        shape = 'rect'
+        if item['name'] == 'Const':
+            shape='rect'
+        if item['name'] == 'Var':
+            shape='rect'
+        g.attr('node', style='filled', fillcolor=item['color'], 
+            color='#303030', fontcolor='white', fontname='Segoe UI', 
+            fontsize='10', fixedsize='false', shape=shape, height='0.2',
+            width='0.2')
+        g.node(str(item['id']), label=item['name'])
+        
+    for item in graph:
+        if item['parentId'] != None:
+            g.attr('edge', arrowsize='0.5', color='#303030')
+            g.edge(str(item['parentId']), str(item['id']))
+
+    return g
+   
